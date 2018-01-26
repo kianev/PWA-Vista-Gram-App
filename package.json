@@ -1,0 +1,22 @@
+{
+  "name": "pwa-vista-gram-app",
+  "version": "1.0.0",
+  "description": "pwa-instagram-simple-clone",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server -c-1"
+  },
+  "keywords": [
+    "pwa",
+    "progressive",
+    "web",
+    "app",
+    "complete",
+    "tutorial"
+  ],
+  "author": "Kaloian",
+  "license": "ISC",
+  "devDependencies": {
+    "http-server": "^0.10.0"
+  }
+}
