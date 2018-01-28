@@ -1,4 +1,7 @@
-let CACHE_STATIC_NAME = 'static-v15';
+importScripts('/src/js/idb.js');
+importScripts('/src/js/utility.js');
+
+let CACHE_STATIC_NAME = 'static-v18';
 let CACHE_DYNAMIC_NAME = 'dynamic-v2';
 let STATIC_FILES = [
   '/',
@@ -6,6 +9,7 @@ let STATIC_FILES = [
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/idb.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
   '/src/js/material.min.js',
@@ -68,52 +72,59 @@ function isInArray (string, array) {
   return array.indexOf(cachePath) > -1;
 }
 
-//Cash then Network strategy with offline support
 self.addEventListener('fetch', function (event) {
-  let url = 'https://httpbin.org/get';
 
-  if(event.request.url.indexOf(url) > -1) {
-    event.respondWith(
-      caches.open(CACHE_DYNAMIC_NAME)
-        .then(cache => {
-          return fetch(event.request)
-            .then(res => {
-              //trimCache(CACHE_DYNAMIC_NAME, 10);
-              cache.put(event.request, res.clone());
-              return res;
-            })
-        })
+  let url = 'https://pwa-vista-gram.firebaseio.com/posts.json';
+  if (event.request.url.indexOf(url) > -1) {
+    event.respondWith(fetch(event.request)
+      .then(function (res) {
+        let clonedRes = res.clone();
+        clearAllData('posts')
+          .then(() => {
+            return clonedRes.json()
+          })
+          .then(function(data) {
+            for (let key in data) {
+              writeData('posts', data[key])
+            }
+          });
+        return res;
+      })
     );
-  } else if(isInArray(event.request.url, STATIC_FILES)) {
-    event.respondWith(caches.match(event.request));
+  } else if (isInArray(event.request.url, STATIC_FILES)) {
+    event.respondWith(
+      caches.match(event.request)
+    );
   } else {
     event.respondWith(
       caches.match(event.request)
-        .then((response) => {
-          if(response) {
+        .then(function (response) {
+          if (response) {
             return response;
           } else {
             return fetch(event.request)
-              .then(res => {
+              .then(function (res) {
                 return caches.open(CACHE_DYNAMIC_NAME)
-                  .then(cache => {
+                  .then(function (cache) {
+                    // trimCache(CACHE_DYNAMIC_NAME, 3);
                     cache.put(event.request.url, res.clone());
                     return res;
                   })
               })
-              .catch(err => {
+              .catch(function (err) {
                 return caches.open(CACHE_STATIC_NAME)
-                  .then(cache => {
-                    if(event.request.headers.get('accept').includes('text/html')){
+                  .then(function (cache) {
+                    if (event.request.headers.get('accept').includes('text/html')) {
                       return cache.match('/offline.html');
                     }
                   });
-              })
+              });
           }
         })
     );
   }
 });
+
 
 /*self.addEventListener('fetch', function (event) {
   event.respondWith(
