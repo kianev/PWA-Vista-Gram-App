@@ -1,7 +1,7 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
 
-let CACHE_STATIC_NAME = 'static-v38';
+let CACHE_STATIC_NAME = 'static-v49';
 let CACHE_DYNAMIC_NAME = 'dynamic-v2';
 let STATIC_FILES = [
   '/',
@@ -64,7 +64,6 @@ self.addEventListener('activate', function (event) {
 function isInArray (string, array) {
   let cachePath;
   if (string.indexOf(self.origin) === 0) {
-    console.log('matched ', string);
     cachePath = string.substring(self.origin.length);
   } else {
     cachePath = string;
@@ -73,7 +72,6 @@ function isInArray (string, array) {
 }
 
 self.addEventListener('fetch', function (event) {
-
   let url = 'https://pwa-vista-gram.firebaseio.com/posts.json';
   if (event.request.url.indexOf(url) > -1) {
     event.respondWith(fetch(event.request)
@@ -179,3 +177,40 @@ self.addEventListener('fetch', function (event) {
 self.addEventListener('fetch', function (event) {
   fetch(event.request);
 });*/
+
+
+self.addEventListener('sync', (event) => {
+ if(event.tag === 'sync-new-posts'){
+   event.waitUntil(
+     readAllData('sync-posts')
+       .then(data => {
+         for (let dt of data) {
+           fetch('https://us-central1-pwa-vista-gram.cloudfunctions.net/storePostData', {
+             method: 'POST',
+             headers: {
+               'Content-Type': 'application/json',
+               'Accept': 'application/json'
+             },
+             body: JSON.stringify({
+               id: dt.id,
+               title: dt.title,
+               location: dt.location,
+               image: 'https://firebasestorage.googleapis.com/v0/b/pwa-vista-gram.appspot.com/o/london.jpg?alt=media&token=2fe911c4-ea15-47b3-9c80-8b3fee8865d4'
+             })
+           })
+             .then(res => {
+               if(res.ok){
+                 res.json()
+                   .then(resData => {
+                     deleteItemFromData('sync-posts', resData.id);
+                   })
+               }
+             })
+             .catch(err => {
+               console.log('Error sending data', err);
+             })
+         }
+       })
+   );
+ }
+})

@@ -2,6 +2,9 @@ let shareImageButton = document.querySelector('#share-image-button');
 let createPostArea = document.querySelector('#create-post');
 let closeCreatePostModalButton = document.querySelector('#close-create-post-modal-btn');
 let sharedMomentsArea = document.querySelector('#shared-moments');
+let form = document.querySelector('form');
+let titleInput = document.querySelector('#title');
+let locationInput = document.querySelector('#location');
 
 function openCreatePostModal() {
   // createPostArea.style.display = 'block';
@@ -104,7 +107,6 @@ fetch(url)
   })
   .then(function(data) {
     networkDataReceived = true;
-    console.log('log data from web',data);
     let dataArray = [];
     for (let key in data) {
       dataArray.push(data[key]);
@@ -122,5 +124,60 @@ if('indexedDB' in window) {
       });
   }
 
+  function sendData () {
+    fetch('https://us-central1-pwa-vista-gram.cloudfunctions.net/storePostData', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        id: new Date().toISOString(),
+        title: titleInput.value,
+        location: locationInput.value,
+        image: 'https://firebasestorage.googleapis.com/v0/b/pwa-vista-gram.appspot.com/o/london.jpg?alt=media&token=2fe911c4-ea15-47b3-9c80-8b3fee8865d4'
+      })
+    })
+      .then(res => {
+        console.log('Sent data', res);
+        updateUI();
+      })
+  }
+  
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    if(titleInput.value.trim() === '' || locationInput.value.trim() === ''){
+      alert('Please enter valid data');
+      return;
+    }
+
+    closeCreatePostModal();
+
+    if('serviceWorker' in navigator && 'SyncManager' in window) {
+        navigator.serviceWorker.ready
+          .then(sw => {
+            let post = {
+              id: new Date().toISOString(),
+              title: titleInput.value,
+              location: locationInput.value
+            }
+            writeData('sync-posts', post)
+              .then(() => {
+                return sw.sync.register('sync-new-posts');
+              })
+              .then(() => {
+                let snackbarContainer = document.querySelector('#confirmation-toast');
+                let data = {message: 'Your post was saved for syncing'};
+                snackbarContainer.MaterialSnackbar.showSnackbar(data);
+              })
+              .catch(err => {
+                console.log(err);
+              });
+          });
+    } else {
+      sendData();
+    }
+  })
 
 
