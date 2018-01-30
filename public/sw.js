@@ -1,7 +1,7 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
 
-let CACHE_STATIC_NAME = 'static-v49';
+let CACHE_STATIC_NAME = 'static-v51';
 let CACHE_DYNAMIC_NAME = 'dynamic-v2';
 let STATIC_FILES = [
   '/',
@@ -213,4 +213,60 @@ self.addEventListener('sync', (event) => {
        })
    );
  }
+});
+
+self.addEventListener('notificationclick', (event) => {
+  let notification = event.notification;
+  let action = event.action;
+
+  console.log(notification);
+
+  if(action === 'confirm') {
+    console.log('confirm was chosen');
+    notification.close();
+  } else {
+    console.log(action);
+    event.waitUntil(
+      clients.matchAll()
+        .then(clis => {
+          let client = clis.find(c => {
+            return c.visibilityState === 'visible'
+          });
+
+          if(client !== undefined) {
+            client.navigate(notification.data.url);
+            client.focus();
+          } else {
+            clients.openWindow(notification.data.url);
+          }
+          notification.close();
+        })
+    );
+  }
+});
+
+self.addEventListener('notificationclose', (event) => {
+  console.log('Notification was closed', event);
+});
+
+self.addEventListener('push', (event) => {
+  console.log('Push notification received', event);
+
+  let data = {title: 'New', content: 'Something new', openUrl: '/'};
+  if(event.data) {
+    data = JSON.parse(event.data.text());
+  }
+
+  let options = {
+    body: data.content,
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png',
+    data: {
+      url: data.openUrl
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  )
 })
